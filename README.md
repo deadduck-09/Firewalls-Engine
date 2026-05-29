@@ -47,7 +47,7 @@ If you like what you see here… the real stash is bigger.
 <h2>⚠️ About this collection</h2>
 
 <p>
-I don't own any wallpapers, all these are taken from [Wallhaven](https://wallhaven.cc/)
+I don't own any wallpapers, all these are taken from <a href="https://wallhaven.cc/">Wallhaven</a>
 </p>
 
 <p>
