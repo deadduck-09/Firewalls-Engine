@@ -20,10 +20,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // ⚠️ This will bypass pre-render linters forcing suspense boundaries
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;
