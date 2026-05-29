@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'react-router-dom'; 
 import { useParams as useNextParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Download, Heart, Copy, Check, Monitor, ShieldAlert } from 'lucide-react';
