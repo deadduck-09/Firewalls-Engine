@@ -1,45 +1,73 @@
-#🔥 FireWalls Web App
----
+<p align="center">
+  <img src="./.banner.png" width="100%">
+</p>
 
-A lightweight pretty spin-off of Wallhaven
+<h1 align="center">🔥 FireWalls Web App</h1>
 
+<p align="center">
+A lightweight pretty spin-off of Wallhaven<br>
 Minimal. Fast. Clean. Just wallpapers doing wallpaper things.
+</p>
+
 ---
 
-#🖼️ What this is
+<h2>🖼️ What this is</h2>
 
-This is the web companion to the main FireWalls repository.
-It lets you download more wallpapers in a smoother, more interactive way.
+<p>
+This is the web companion to the main <b>FireWalls</b> repository.<br>
+It lets you browse and download wallpapers in a smoother, more interactive way.
+</p>
 
+<p>
 If you like what you see here… the real stash is bigger.
+</p>
+
 ---
 
-#🚀 Main Collection
+<h2>🚀 Main Collection</h2>
 
-👉 Explore the full FireWalls repo here:
-https://github.com/deadduck-09/FireWalls
+<p>
+👉 <a href="https://github.com/deadduck-09/FireWalls">Explore the full FireWalls repo here</a>
+</p>
 
-That repo contains:
+<p>That repo contains:</p>
 
-Full wallpaper library (constantly expanding)
-Organized categories (anime, minimal, cyberpunk, nature, etc.)
+<ul>
+  <li>Full wallpaper library (constantly expanding)</li>
+  <li>Organized categories (anime, minimal, cyberpunk, nature, etc.)</li>
+</ul>
+
 ---
 
-!Note:-
--This is mostly optimized for desktop mode browsers, if u are on android kindly turn on the desktop mode on landscape
--Will be improved when I get time from my studies 📚️
+<h2>⚡ Note</h2>
+
+<ul>
+  <li>This is mostly optimized for desktop browsers. If you're on Android, use desktop mode in landscape.</li>
+  <li>Will be improved when I get time from my studies 📚</li>
+</ul>
+
 ---
 
-⚠️ About this collection
+<h2>⚠️ About this collection</h2>
+
+<p>
 This is a personal wallpaper collection curated over time.
-
 Some wallpapers come from various places across the internet and social platforms.
+</p>
 
+<p>
 If you're the original artist and want credit or removal, feel free to reach out — it will be handled quickly.
+</p>
 
+<p>
 Big respect to all creators. This repo is just a collection of things I genuinely like.
+</p>
+
 ---
 
-⭐ Support
-If you found something you like, consider starring the repo ⭐
+<h2>⭐ Support</h2>
+
+<p>
+If you found something you like, consider starring the repo ⭐<br>
 It helps more people discover it.
+</p>
