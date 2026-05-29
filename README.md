@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="./.banner.png" width="100%">
-</p>
-
 <h1 align="center">🔥 FireWalls Web App</h1>
 
 <p align="center">
@@ -33,8 +29,8 @@ If you like what you see here… the real stash is bigger.
 <p>That repo contains:</p>
 
 <ul>
-  <li>Full wallpaper library (constantly expanding)</li>
-  <li>Organized categories (anime, minimal, cyberpunk, nature, etc.)</li>
+  <li>Personalized Wallpapers</li>
+  <li>Organized categories (for Android)</li>
 </ul>
 
 ---
