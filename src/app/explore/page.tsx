@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, SlidersHorizontal, LayoutGrid, Monitor, Smartphone } from 'lucide-react';
+import { Search, Monitor, Smartphone } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import WallpaperModal from '@/components/WallpaperModal';
 import { Wallpaper } from '@/types/wallpaper';
 
 export const dynamic = 'force-dynamic';
-export default function ExplorePage() {
+
+// 1. Move all hook execution and logic into a dedicated child component
+function ExploreContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || 'anime';
   const initialSort = searchParams.get('sorting') || 'relevance';
@@ -17,7 +19,7 @@ export default function ExplorePage() {
   const [wallpapers, setWallpapers] = useState<Wallpaper[]>([]);
   const [query, setQuery] = useState(initialQuery);
   const [sorting, setSorting] = useState(initialSort);
-  const [aspectRatio, setAspectRatio] = useState<string>(''); // 'landscape' | 'portrait'
+  const [aspectRatio, setAspectRatio] = useState<string>(''); 
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -37,20 +39,14 @@ export default function ExplorePage() {
 
       if (data.data) {
         setWallpapers((prev) => {
-  const merged = clearOld
-    ? data.data
-    : [...prev, ...data.data];
-
-  const unique = merged.filter(
-    (wallpaper, index, self) =>
-      index === self.findIndex((w) => w.id === wallpaper.id)
-  );
-
-  return unique;
-});
-        setHasMore(
-          data.meta?.current_page < data.meta?.last_page
-        );
+          const merged = clearOld ? data.data : [...prev, ...data.data];
+          const unique = merged.filter(
+            (wallpaper, index, self) =>
+              index === self.findIndex((w) => w.id === wallpaper.id)
+          );
+          return unique;
+        });
+        setHasMore(data.meta?.current_page < data.meta?.last_page);
       } else {
         setHasMore(false);
       }
@@ -83,7 +79,6 @@ export default function ExplorePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-10">
-      {/* Control Configuration Panel */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between border-b border-white/5 pb-8">
         <div className="relative w-full md:w-96 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -97,7 +92,6 @@ export default function ExplorePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-          {/* Orientation Selector Matrix */}
           <div className="flex bg-white/[0.02] border border-white/5 p-1 rounded-xl">
             <button
               onClick={() => setAspectRatio('')}
@@ -133,7 +127,6 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {/* Fluid Dynamic Layout Output */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {wallpapers.map((wp, index) => {
           if (wallpapers.length === index + 1) {
@@ -151,5 +144,18 @@ export default function ExplorePage() {
 
       <WallpaperModal wallpaper={selectedWallpaper} onClose={() => setSelectedWallpaper(null)} />
     </div>
+  );
+}
+
+// 2. The main page component acts purely as a boundary, completely shielding the hook
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+      </div>
+    }>
+      <ExploreContent />
+    </Suspense>
   );
 }
