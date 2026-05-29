@@ -47,12 +47,11 @@ If you like what you see here… the real stash is bigger.
 <h2>⚠️ About this collection</h2>
 
 <p>
-This is a personal wallpaper collection curated over time.
-Some wallpapers come from various places across the internet and social platforms.
+I don't own any wallpapers, all these are taken from [Wallhaven](https://wallhaven.cc/)
 </p>
 
 <p>
-If you're the original artist and want credit or removal, feel free to reach out — it will be handled quickly.
+I own no disrespect to any artist, I appreciate everyone's wokr. CHEERS!!
 </p>
 
 <p>
