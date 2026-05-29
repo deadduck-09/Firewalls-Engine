@@ -8,6 +8,7 @@ import SkeletonCard from '@/components/ui/SkeletonCard';
 import WallpaperModal from '@/components/WallpaperModal';
 import { Wallpaper } from '@/types/wallpaper';
 
+export const dynamic = 'force-dynamic';
 export default function ExplorePage() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || 'anime';
