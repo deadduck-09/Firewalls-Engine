@@ -1,134 +1,357 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, Heart, ExternalLink, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { X, Download, Heart, ChevronLeft, ChevronRight, Copy, Check, Calendar, Loader2 } from 'lucide-react';
 import { Wallpaper } from '@/types/wallpaper';
-import { useFavoritesStore } from '@/store/useFavoritesStore';
 
-interface ModalProps {
+interface WallpaperModalProps {
   wallpaper: Wallpaper | null;
+  wallpapers: Wallpaper[];
+  onSelectWallpaper: (wallpaper: Wallpaper | null) => void;
+  onSearchTag: (tag: string) => void;
+  isFav: boolean;
+  onToggleFav: (wallpaper: Wallpaper) => void;
   onClose: () => void;
 }
 
-export default function WallpaperModal({ wallpaper, onClose }: ModalProps) {
-  const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore();
+export default function WallpaperModal({
+  wallpaper,
+  wallpapers,
+  onSelectWallpaper,
+  onSearchTag,
+  isFav,
+  onToggleFav,
+  onClose
+}: WallpaperModalProps) {
+  const [imgSrc, setImgSrc] = useState<string>(wallpaper?.path || '');
+  const [isDownloading, setIsDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  const [fullDetails, setFullDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    if (!wallpaper) return;
+
+    setImgSrc(wallpaper.path);
+    setCopied(false);
+    setFullDetails(null); 
+
+    const fetchFullDetails = async () => {
+      try {
+        setLoadingDetails(true);
+        
+        // Check if this wallpaper belongs to your custom GitHub Repo or Wallhaven
+        const isRepoWall = typeof wallpaper.id === 'string' && 
+          (wallpaper.id.includes('/') || wallpaper.id.startsWith('git-') || !/^\d+$/);
+
+        let res;
+        if (isRepoWall) {
+          // Route into your curated collection endpoint
+          res = await fetch(`/api/curated`);
+          if (!res.ok) throw new Error('Failed to fetch curated repository registry');
+          
+          const repoData = await res.json();
+          if (Array.isArray(repoData)) {
+            const matchedMeta = repoData.find(item => String(item.id) === String(wallpaper.id));
+            if (matchedMeta) {
+              setFullDetails(matchedMeta);
+              return;
+            }
+          }
+        } else {
+          // Route cleanly through normal proxy route for true Wallhaven items
+          res = await fetch(`/api/wallpapers/${wallpaper.id}`);
+          if (!res.ok) throw new Error('Failed to get asset details via proxy');
+          
+          const json = await res.json();
+          if (json && json.data) {
+            setFullDetails(json.data);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching dynamic asset metadata targets:', err);
+      } finally {
+        setLoadingDetails(false);
+      }
+    };
+
+    fetchFullDetails();
+  }, [wallpaper]);
 
   if (!wallpaper) return null;
-  const favorited = isFavorite(wallpaper.id);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(wallpaper.path);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const currentIndex = wallpapers.findIndex((w) => String(w.id) === String(wallpaper.id));
+  const hasLeftArrow = currentIndex > 0;
+  const hasRightArrow = currentIndex < wallpapers.length - 1;
+
+  const navigateLeft = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasLeftArrow) onSelectWallpaper(wallpapers[currentIndex - 1]);
   };
 
+  const navigateRight = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasRightArrow) onSelectWallpaper(wallpapers[currentIndex + 1]);
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(wallpaper.path);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      const proxyUrl = `/api/download?url=${encodeURIComponent(wallpaper.path)}`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error("Download pipeline failure");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `wallpaper-${wallpaper.id}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download asset:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const formatTimelineDate = (dateVal: any) => {
+    if (!dateVal) return "Fetching...";
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return String(dateVal);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return String(dateVal);
+    }
+  };
+
+  const validImgSrc = imgSrc || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  const tagsToRender = fullDetails?.tags || wallpaper.tags || [];
+
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
-        {/* Backdrop glass blur overlay */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/80 backdrop-blur-xl"
-        />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/95 backdrop-blur-sm overflow-y-auto subtle-scrollbar">
+      {/* Dismiss backdrop overlay click handler */}
+      <div className="absolute inset-0 fixed" onClick={onClose} />
 
-        {/* Modal Sheet container */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: 'spring', duration: 0.5 }}
-          className="relative bg-[#0d0d11]/90 border border-white/10 rounded-3xl w-full max-w-6xl h-[85vh] overflow-y-auto grid grid-cols-1 lg:grid-cols-3 z-10 shadow-2xl shadow-black"
-        >
-          <button onClick={onClose} className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/40 border border-white/10 text-zinc-400 hover:text-white transition-all">
-            <X className="w-5 h-5" />
-          </button>
+      {/* Main Container Core */}
+      <div className="relative w-full max-w-6xl flex flex-col md:flex-row items-center justify-center z-10 gap-2 md:gap-4 my-auto">
+        
+        {/* DESKTOP PREVIOUS ARROW BUTTON */}
+        <div className="hidden md:flex w-12 h-12 items-center justify-center shrink-0">
+          {hasLeftArrow && (
+            <button
+              onClick={navigateLeft}
+              className="p-3 rounded-full bg-neutral-900/60 border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all active:scale-95"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+        </div>
 
-          {/* Left / Visual Area */}
-          <div className="lg:col-span-2 bg-black/40 relative flex items-center justify-center p-6 border-b lg:border-b-0 lg:border-r border-white/5">
-            <div className="absolute inset-0 opacity-20 filter blur-3xl pointer-events-none" style={{ backgroundColor: wallpaper.colors?.[0] || '#1a1a24' }} />
-            <div className="relative w-full h-full min-h-[300px] lg:min-h-0 flex items-center justify-center">
+        {/* INTERIOR LAYOUT FRAME */}
+        <div className="relative w-full max-w-5xl bg-[#09090b] border border-neutral-800/60 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row md:h-[75vh] max-h-none md:max-h-[85vh]">
+          
+          {/* LEFT INTERIOR ASPECT CANVAS */}
+          <div className="relative flex-1 bg-black/40 flex items-center justify-center p-2 sm:p-4 border-b md:border-b-0 md:border-r border-neutral-800/60 min-h-[45vh] sm:min-h-[55vh] md:min-h-0 h-auto md:h-full">
+            <div className="relative w-full h-full min-h-[45vh] sm:min-h-[55vh] md:min-h-0 flex items-center justify-center">
               <Image
-                src={wallpaper.path}
-                alt="High-resolution render"
+                src={validImgSrc}
+                alt={wallpaper.id ? `Wallpaper ${wallpaper.id}` : "System Display Target"}
                 fill
-                className="object-contain rounded-xl"
-                sizes="(max-width: 1024px) 100vw, 66vw"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 50vw"
+                className="object-contain w-full h-full select-none"
                 priority
+                unoptimized
+                onError={() => {
+                  if (wallpaper.thumbs?.large && imgSrc !== wallpaper.thumbs.large) {
+                    setImgSrc(wallpaper.thumbs.large);
+                  }
+                }}
               />
             </div>
+            
+            {/* MOBILE FLOATER DISMISS */}
+            <button 
+              onClick={onClose}
+              className="absolute top-4 left-4 p-2 rounded-xl bg-black/70 border border-neutral-800 text-neutral-400 hover:text-white transition-colors z-20 md:hidden shadow-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Right / Information Engine */}
-          <div className="p-8 flex flex-col justify-between space-y-8 bg-zinc-950/20">
-            <div className="space-y-6">
-              <div>
-                <span className="text-xs font-semibold text-rose-400 tracking-widest uppercase block mb-1">Active Specs</span>
-                <h2 className="text-2xl font-bold tracking-tight text-white">{wallpaper.category.toUpperCase()} Repository</h2>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
-                  <span className="text-xs text-zinc-500 block">Resolution</span>
-                  <span className="text-sm font-mono font-medium text-zinc-200">{wallpaper.resolution}</span>
-                </div>
-                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
-                  <span className="text-xs text-zinc-500 block">Aspect Ratio</span>
-                  <span className="text-sm font-mono font-medium text-zinc-200">{wallpaper.ratio}</span>
-                </div>
-              </div>
-
-              {wallpaper.colors && (
+          {/* RIGHT SIDE PANEL: METADATA DETAILS DRAWER */}
+          <div className="w-full md:w-80 p-5 sm:p-6 flex flex-col justify-between h-auto md:h-full bg-neutral-950/40 backdrop-blur-md shrink-0">
+            <div className="space-y-5 overflow-y-visible md:overflow-y-auto pr-0 md:pr-1 subtle-scrollbar">
+              
+              <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-zinc-500 block mb-2">Palette DNA</span>
-                  <div className="flex gap-2">
-                    {wallpaper.colors.map((color, idx) => (
-                      <div key={idx} className="w-8 h-8 rounded-lg border border-white/10 shadow" style={{ backgroundColor: color }} title={color} />
+                  <span className="text-[10px] font-bold tracking-widest text-orange-500 uppercase block mb-0.5">Active Specs</span>
+                  <h2 className="text-base font-bold text-neutral-200 tracking-tight">
+                    {wallpaper.id ? `#${wallpaper.id}` : 'General Repository'}
+                  </h2>
+                </div>
+                <button 
+                  onClick={onClose}
+                  className="p-1.5 rounded-lg bg-neutral-900/80 border border-neutral-800 text-neutral-400 hover:text-white transition-colors hidden md:block"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Resolution Metrics Panel */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 rounded-xl bg-neutral-900/50 border border-neutral-800/50">
+                  <span className="text-[9px] font-medium text-neutral-500 uppercase tracking-wider block mb-0.5">Resolution</span>
+                  <span className="text-xs font-semibold text-neutral-300">
+                    {fullDetails?.resolution || wallpaper.resolution || '1920x1080'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-neutral-900/50 border border-neutral-800/50">
+                  <span className="text-[9px] font-medium text-neutral-500 uppercase tracking-wider block mb-0.5">Aspect Ratio</span>
+                  <span className="text-xs font-semibold text-neutral-300">
+                    {fullDetails?.ratio || wallpaper.ratio || '1.78'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Palette DNA Color Blocks */}
+              {(fullDetails?.colors || wallpaper.colors) && (
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold tracking-widest text-orange-500 uppercase block">Palette DNA</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {(fullDetails?.colors || wallpaper.colors).map((color: string, idx: number) => (
+                      <div 
+                        key={idx} 
+                        className="w-5 h-5 rounded-md border border-black/40 shadow-inner group relative"
+                        style={{ backgroundColor: color.startsWith('#') ? color : `#${color}` }}
+                        title={color}
+                      />
                     ))}
                   </div>
                 </div>
               )}
+
+              {/* Timeline Database Record */}
+              <div className="flex items-center gap-2 text-neutral-400 py-2 border-t border-b border-neutral-900/60 my-2">
+                <Calendar className="w-4 h-4 text-orange-500" />
+                <span className="text-[11px] font-medium text-neutral-400">Timeline Record:</span>
+                <span className="text-[11px] text-neutral-300 font-semibold">
+                  {formatTimelineDate(fullDetails?.created_at || wallpaper.created_at)}
+                </span>
+              </div>
+
+              {/* Genre Structural Tags Layout */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold tracking-widest text-orange-500 uppercase block">Genre Tags</span>
+                {loadingDetails ? (
+                  <div className="flex items-center gap-2 text-xs text-neutral-500 py-1">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-500" />
+                    Parsing live metadata labels...
+                  </div>
+                ) : tagsToRender.length > 0 ? (
+                  <div className="flex flex-wrap gap-1 max-h-[150px] md:max-h-none overflow-y-auto md:overflow-y-visible subtle-scrollbar">
+                    {tagsToRender.map((tag: any, idx: number) => {
+                      const tagName = typeof tag === 'string' ? tag : (tag.name || tag.id);
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            onSearchTag(tagName);
+                            onClose();
+                          }}
+                          className="px-2 py-0.5 text-[11px] rounded bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-orange-400 hover:border-orange-500/30 transition-all"
+                        >
+                          #{tagName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span className="text-xs text-neutral-600 italic">No associated data tags found</span>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <a
-                href={wallpaper.path}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-4 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white font-medium rounded-2xl transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2"
+            {/* TOUCH PORTABLE BUTTON ROW (SWAP ARROWS FOR TOUCH SCREENS) */}
+            <div className="flex md:hidden items-center justify-between gap-4 mt-4 pt-2 border-t border-neutral-900/60">
+              <button
+                onClick={navigateLeft}
+                disabled={!hasLeftArrow}
+                className="flex-1 py-2 rounded-xl bg-neutral-900/80 border border-neutral-800 text-neutral-400 hover:text-white disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-1 text-xs"
               >
-                <Download className="w-5 h-5" /> Download Asset
-              </a>
+                <ChevronLeft className="w-4 h-4" /> Previous
+              </button>
+              <button
+                onClick={navigateRight}
+                disabled={!hasRightArrow}
+                className="flex-1 py-2 rounded-xl bg-neutral-900/80 border border-neutral-800 text-neutral-400 hover:text-white disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center gap-1 text-xs"
+              >
+                Next <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
+            {/* OPERATIONAL CTA BUTTON GROUP BLOCK */}
+            <div className="space-y-2 mt-4 md:mt-4 border-t border-neutral-800/60 pt-4">
+              <button
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="w-full py-3 md:py-2.5 px-4 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 disabled:from-neutral-800 disabled:to-neutral-800 disabled:text-neutral-500 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-950/20"
+              >
+                <Download className="w-4 h-4" />
+                {isDownloading ? 'Downloading...' : 'Download Asset'}
+              </button>
+
+              <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => (favorited ? removeFavorite(wallpaper.id) : addFavorite(wallpaper))}
-                  className={`py-3 px-4 border rounded-xl font-medium transition-all text-sm flex items-center justify-center gap-2 ${
-                    favorited
-                      ? 'bg-rose-500/10 border-rose-500/40 text-rose-400'
-                      : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/[0.06]'
-                  }`}
+                  onClick={() => onToggleFav(wallpaper)}
+                  className="py-2.5 md:py-2 px-3 rounded-xl border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 text-neutral-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
                 >
-                  <Heart className="w-4 h-4" /> {favorited ? 'Favorited' : 'Save'}
+                  <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
+                  {isFav ? 'Saved' : 'Save'}
                 </button>
+                
                 <button
-                  onClick={handleCopy}
-                  className="py-3 px-4 bg-white/[0.02] border border-white/10 text-zinc-300 hover:bg-white/[0.06] rounded-xl font-medium transition-all text-sm flex items-center justify-center gap-2"
+                  onClick={handleCopyLink}
+                  className="py-2.5 md:py-2 px-3 rounded-xl border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 text-zinc-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
                 >
-                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Copied' : 'Share Link'}
+                  {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? 'Copied' : 'Copy Link'}
                 </button>
               </div>
             </div>
+
           </div>
-        </motion.div>
+
+        </div>
+
+        {/* DESKTOP NEXT ARROW BUTTON */}
+        <div className="hidden md:flex w-12 h-12 items-center justify-center shrink-0">
+          {hasRightArrow && (
+            <button
+              onClick={navigateRight}
+              className="p-3 rounded-full bg-neutral-900/60 border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all active:scale-95"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
       </div>
-    </AnimatePresence>
+    </div>
   );
 }
