@@ -21,7 +21,9 @@ export async function GET(request: Request) {
     }
 
     // Default: General Query Explorer Feed Lists builder endpoint lookups
-    let targetUrl = `https://wallhaven.cc/api/v1/search?q=${encodeURIComponent(q)}&page=${page}&sorting=${sorting}&categories=111&purity=100&apikey=${apiKey}`;
+   const categories = q.trim() ? '111' : '110';
+
+let targetUrl = `https://wallhaven.cc/api/v1/search?q=${encodeURIComponent(q)}&page=${page}&sorting=${sorting}&categories=${categories}&purity=100&apikey=${apiKey}`;
     if (ratios) {
       targetUrl += `&ratios=${ratios}`;
     }
